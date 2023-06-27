@@ -20,43 +20,14 @@ const settings = {
 const color   = {
     label   : '0x008E',  // Change this to update gump colors!
     value   : '0x0037',  // Change this to update gump colors!
-
     black   : '0x0000',
-    green   : {
-        light: '0x0046', 
-        norm: '0x0044', 
-        dark: '0x00A7'
-    },
-    blue    : {
-        light: '0x0064', 
-        norm: '0x0062', 
-        dark: '0x00C5'
-    },
-    red     : {
-        light: '0x0028', 
-        norm: '0x0026', 
-        dark: '0x0089'
-    },
-    occ  : {
-        light: '0x002D', 
-        norm: '0x002B', 
-        dark: '0x008E'
-    },
-    purple  : {
-        light: '0x001E', 
-        norm: '0x0017', 
-        dark: '0x007A'
-    },
-    yellow  : {
-        light: '0x0037', 
-        norm: '0x0035', 
-        dark: '0x0098'
-    },
-    white   : {
-        light: '0x7FA',  
-        norm: '0x7EE',  
-        dark: '0x7E2' 
-    }
+    green   : {light: '0x0046', norm: '0x0044', dark: '0x00A7'},
+    blue    : {light: '0x0064', norm: '0x0062', dark: '0x00C5'},
+    red     : {light: '0x0028', norm: '0x0026', dark: '0x0089'},
+    occ     : {light: '0x002D', norm: '0x002B', dark: '0x008E'},
+    purple  : {light: '0x001E', norm: '0x0017', dark: '0x007A'},
+    yellow  : {light: '0x0037', norm: '0x0035', dark: '0x0098'},
+    white   : {light: '0x7FA',  norm: '0x7EE',  dark: '0x7E2'}
 };
     
 const items = {
@@ -186,8 +157,10 @@ const crustations = [
 ];
 
 const zones = [
-    // City
-    ["Despise", 5566, 645, 5594, 621],
+    ["Britain", 0, 0, 0, 0],
+    ["Vesper",  0, 0, 0, 0],
+    ["Skara Brae|Trinsic|Jhelom", 0, 0, 0, 0],
+    ["Moonglow|Floating Emporium", 0, 0, 0, 0],
 ];
 
 function findZone(){
@@ -204,6 +177,7 @@ function findZone(){
 }
 
 function Autostart(){
+    var state;
     Orion.ResetSearchArea();
     Shared.ClearArrays();
     display();
@@ -216,24 +190,7 @@ function Autostart(){
 
         if(load('boat')){
             fishArea();
-            if(load('boat')){
-                var sx = Player.X(), sy = Player.Y();
-                Orion.Say("Forward");
-                Orion.SetTimer('sailing');
-                while(Orion.GetDistance(sx, sy) < 16){
-                    if(Orion.Timer('sailing') > 10000)
-                        break;
-                    Orion.Wait(100);
-                }
-                Orion.Say("Stop");
-                Orion.Wait(1000);
-            }
-        }   
-
-        if(load('crab')){
-            crabFishing();
         }
-
         Orion.Wait(250);
     }
 }
@@ -548,12 +505,12 @@ function setStatus(msg){
 function fishArea(){
     for(x=-4;x<8;x+=8){
         for(y=-4;y<8;y+=8){
-            fishSpot(Player.X()+x, Player.Y()+y);
+            fishSpot(x, y);
         }
     }
 }
 
-function fishSpot(x, y, relative){
+function fishSpot(x, y){
 	Orion.ClearJournal();
     do {
         var tiller = Orion.FindObject(load('tiller'));
@@ -570,6 +527,7 @@ function fishSpot(x, y, relative){
                  Orion.GetCliLocString(500778) +'|' +
                  Orion.GetCliLocString(500979) +'|' +
                  "You pull up a heavy chest";
+
 	while(!Orion.InJournal(string)){//} && load('auto') == 'boat'){
         if(load('weapon') == 'mage' && !Orion.BuffExists('Protection'))
             cast('Protection');
@@ -577,7 +535,6 @@ function fishSpot(x, y, relative){
         var serp = Orion.FindType(0x0096, any, ground, 'mobile', 10)[0];
         if(serp){
             addCount('serpents');
-            menu.AddText(110, 70, color.value, load('serpents'), 300, 13113);
             attack(serp);
         }
 
@@ -591,11 +548,10 @@ function fishSpot(x, y, relative){
 			checkWeight();
             if(setRod()){
 				Orion.AddDisplayTimer('fishing', 8000, 'UnderChar', 'Line|Bar', 'Fishing', 0, 0, 'any', -1, '0x0000FFFE');
-                Orion.WaitForTarget();
-                Orion.TargetTile('water', x, y, Player.Z());
+                Orion.WaitTargetTileRelative('water', x, y, Player.Z());
             } else {
-                var hold = openHold();
-                var poles = Orion.FindTypeEx(items["fishpole"], any, hold.Serial()).shift();
+                openHold();
+                var poles = Orion.FindTypeEx(items["fishpole"], any, 'lastcontainer')[0];
                 if(poles){
                     Orion.MoveItem(poles.Serial(), 0, backpack);
                     Orion.Wait('moveitemdelay');
@@ -625,13 +581,11 @@ function fishSpot(x, y, relative){
             Orion.Wait('useitemdelay');
         }
 		
-        // Loot any corpses
 		var corpse = Orion.FindTypeEx(0x2006, any, ground, 'item', 10)[0];
 		if(corpse){
             setStatus("Looting");
 			var sx = Player.X(), sy = Player.Y();
-            //if(!walkTo(corpse.X(), corpse.Y(), 2))
-                //sailTo(corpse.X(), corpse.Y(), 2);
+
             if(load('lootHides')){
                 Orion.Wait('useitemdelay');
                 Orion.WaitTargetObject(corpse.Serial());
@@ -640,43 +594,21 @@ function fishSpot(x, y, relative){
             }
 
 			Orion.UseObject(corpse.Serial());
-			Orion.WaitForContainerGump();
-            var corp = Orion.GetLastGump();
 			Orion.Wait('useitemdelay');
-            Orion.CheckLag();
 
-			Orion.FindTypeEx(any, any, 'lastcontainer').forEach(function(obj){
-                if(obj.Graphic() == items['mib']){
-                    Orion.MoveItem(obj.Serial(), 0, backpack);
-                    addCount('mibs');
-                    Orion.Wait('moveitemdelay');
-                } else if(obj.Graphic() == items['nets']){
-                    if(load('lootNets') || (load('lootCNet') && obj.Color() != '0x08A0')){
-                        if(obj.Color() == '0x08A0'){
-                            addCount('nets');
-                        } else if(load('lootCNet') == 'true'){
-                            addCount('cnets');
-                        }
-                        menu.Update();
-                        Orion.MoveItem(obj.Serial(), 0, backpack);
-                        Orion.Wait('moveitemdelay');
-                    }
-                } else if(obj.Graphic() == items['gold'] && load('lootGold')){
-                    Orion.MoveItem(obj.Serial(), 0, backpack);
-                    Orion.Wait('moveitemdelay');
-                } else if(obj.Graphic() == items['hides'] && load('lootHides')){
-                    addCount('hides', obj.Count());
-                    Orion.MoveItem(obj.Serial(), 0, backpack);
-                    Orion.Wait('moveitemdelay');
-                } else if(obj.Graphic() == items["scales"] && load('lootScales')){
-                    addCount('scales');
-                    Orion.MoveItem(obj.Serial(), 0, backpack);
-                    Orion.Wait('moveitemdelay');
-                }
+            Orion.FindTypeEx(any, any, 'lastcontainer').filter(function(obj){
+                return obj.Graphic() === items['mib'] ||
+                       (obj.Graphic() === items['nets'] && load('lootNets')) ||
+                       (obj.Graphic() === items['nets'] && load('lootCNets')) ||
+                       (obj.Graphic() === items['gold'] && load('lootGold')) ||
+                       (obj.Graphic() === items['hides'] && load('lootHides')) ||
+                       (obj.Graphic() === items['scales'] && load('lootScales'));
+            }).forEach(function(item){
+                addCount(item.Name());
+                Orion.MoveItem(item.Serial(), item.Count(), backpack);
                 Orion.Wait('moveitemdelay');
-                corp.Close();
             });
-            Orion.Wait('moveitemdelay');
+
             Orion.FindTypeEx(items['boots'], any, backpack).forEach(function(boot){
                 Orion.MoveItem(boot.Serial(), 0, 'lastcontainer');
                 Orion.Wait('moveitemdelay');
@@ -695,17 +627,15 @@ function fishSpot(x, y, relative){
 			Orion.ClearJournal(Orion.GetCliLocString(1072597));
 			addCount('pearl');
 		}
+
         var istring = Orion.GetCliLocString(1008124);
         istring = istring.split(':')[0];
 		if(Orion.InJournal(istring)){
             var found = false;
 			var item = Orion.LastJournalMessage().Text().split(': ')[1];
-            for(i in fish){
-                if(fish[i].name.toLowerCase() == item)
-                    found = true;
-            }   
-            if(found)
-                addCount(item);
+            for(i in fish)
+                if(Orion.Contains(fish[i], item))
+                    addCount(item);
 			Orion.ClearJournal(istring);
 			Orion.RemoveDisplayTimer('fishing');
 		}
@@ -898,6 +828,7 @@ function cleanupBouy(){
 /**********************************************
  *  General Functions
  **********************************************/
+
 function attack(target){
     Orion.CancelWaitTarget();
     if(Orion.HaveTarget())
